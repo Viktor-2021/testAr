@@ -1,0 +1,75 @@
+$(function() {
+
+    $('#btn_agregarCarro').click(function() {
+        $(".cont_loading").fadeIn(200);
+        var id_pro = $(this).attr('rel');
+        var cantidad = parseInt($(".campoSpinner").val());
+        var cantActual = $(".cantItems").html();
+
+        var sku = $(this).attr('data-sku');
+
+        var nombreProducto = $(".nombreProducto").html();
+        var imagen = $("#img_01").attr("src");
+        console.log(id_pro);
+        $.ajax({
+            url: 'ajax/ws_stock.php',
+            type: 'post',
+            dataType: 'json',
+            data: { sku: sku, qty: cantidad, id: id_pro },
+            beforeSend: function() {
+                $('#btn_agregarCarro').html('VERIFICANDO STOCK...');
+            },
+            success: function(re) {
+                console.log(re);
+                if (re['status'] == 'success') {
+                    $.ajax({
+                        type: 'GET',
+                        url: 'tienda/addCarro.php',
+                        data: {
+                            id: id_pro,
+                            action: "add",
+                            qty: cantidad
+                        },
+                        cache: false,
+                        success: function() {
+                            var cantTotal = parseInt(cantActual) + parseInt(cantidad);
+                            $(".cantItems").html(cantTotal);
+                            $(".totalHeader").load("tienda/totalCart.php");
+                            $("#contMiniCart").load("tienda/miniCart.php");
+                            $(".cont_loading").fadeOut(100);
+                            $.ajax({
+                                type: 'GET',
+                                url: 'pags/popUpAddToCart.php',
+                                data: { id: id_pro, qty: cantidad },
+                                cache: false,
+                                success: function(resp) {
+                                    var value = "";
+                                    var AddedItemCategories = "";
+                                    var ItemURL = "";
+                                    var ItemPrice = "";
+                                    var CheckoutURL = "https://amoble.cl/envio-y-pago";
+                                    addCartKlaviyo(value, nombreProducto, id_pro, sku, AddedItemCategories, imagen, ItemURL, ItemPrice, cantidad, CheckoutURL);
+
+                                    $("#popUp").html(resp);
+                                    $("#popUp2").html(resp);
+                                    $(".fondoPopUp").fadeIn(100);
+                                }
+                            }).done(function() {
+                                setTimeout(function() { $(".fondoPopUp").fadeOut(200); }, 3000);
+                            });
+                        }
+                    });
+                } else {
+                    alertify.error('Error: ' + re['message']);
+                    $(".cont_loading").fadeOut(100);
+                };
+                $('#btn_agregarCarro').html('AGREGAR AL CARRO');
+            }
+        }).done(function() {
+            $(".cont_loading").fadeOut(100);
+        }).fail(function(res) {
+            console.log(res);
+            $(".cont_loading").fadeOut(100);
+        });
+    });
+});
